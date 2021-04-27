@@ -16,7 +16,7 @@ To test locally do:
 
 To deploy and test on prod do:
 
- 1. Deploy your functions using `firebase deploy --only functions`
+ 1. Deploy your functions using `firebase deploy`
  1. Open the app using `firebase open hosting:site`, this will open a browser.
 
 
