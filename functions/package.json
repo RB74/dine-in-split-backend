@@ -1,12 +1,16 @@
 {
-  "name": "Dine-In Split",
+  "name": "dine-in-split",
   "description": "Back End Microservice for the mobile app",
   "dependencies": {
     "cookie-parser": "^1.4.4",
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "firebase-admin": "^9.6.0",
-    "firebase-functions": "^3.13.2"
+    "firebase-functions": "^3.13.2",
+    "axios": "^0.21.1",
+    "dotenv": "^8.2.0",
+    "md5": "*",
+    "square": "^8.0.0"
   },
   "devDependencies": {
     "eslint": "^6.8.0",
