@@ -36,7 +36,7 @@ const cookieParser = require('cookie-parser');
 const md5 = require('md5');
 const {ApiError, Client, Environment} = require('square');
 const app = express();
-app.use(cookieParser());
+
 
 const {PORT, SQ_SANDBOX_APP_ID, SQ_SANDBOX_APP_SECRET} = process.env;
 

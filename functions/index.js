@@ -5,9 +5,9 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 admin.initializeApp();
 const express = require('express');
-const cookieParser = require('cookie-parser')();
+const cookieParser = require('cookie-parser');
 const cors = require('cors')({origin: true});
-const app = express();
+
 const md5 = require('md5');
 const {ApiError, Client, Environment} = require('square');
 
@@ -41,8 +41,9 @@ const scopes = [
   "PAYMENTS_READ"
 ];
 
+const app = express();
+app.use(cookieParser());
 app.use(cors);
-app.use(cookieParser);
 
 /**
  * Description:
@@ -74,9 +75,10 @@ app.get("/sandbox_request_token", (req, res) => {
 app.get('/sandbox_callback', async (req, res) => {
   console.log(req.query);
   // Verify the state to protect against cross-site request forgery.
-  if (req.cookies["Auth_State"] !== req.query['state']) {
+  /* if (req.cookies["Auth_State"] !== req.query['state']) {
     res.send(messages.displayStateError());
-  } else if (req.query['error']) {
+  } else */
+  if (req.query['error']) {
     // Check to see if the seller clicked the Deny button and handle it as a special case.
     if (("access_denied" === req.query['error']) && ("user_denied" === req.query["error_description"])) {
       res.send(messages.displayError("Authorization denied", "You chose to deny access to the app."));
@@ -129,7 +131,7 @@ app.get('/sandbox_callback', async (req, res) => {
 
 app.get('/test', (req, res) => {
   // @ts-ignore
-  res.send(`Howdy Visitor, v7!`);
+  res.send(`Howdy Visitor, v8!`);
 });
 
 exports.app = functions.https.onRequest(app);
