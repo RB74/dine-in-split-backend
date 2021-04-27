@@ -1,5 +1,11 @@
 # Dine-In Split Back End
 
+##
+In `functions` directory, prepare `.env` file, see  `.env.example`
+
+##
+Install dependencies locally by running: `cd functions; npm install; cd -`
+
 ## Deploy and test
 
 This sample comes with a web-based UI for testing the function.
