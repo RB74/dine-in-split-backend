@@ -1,9 +1,9 @@
 # Dine-In Split Back End
 
-##
+## Env file
 In `functions` directory, prepare `.env` file, see  `.env.example`
 
-##
+## Installing dependencies
 Install dependencies locally by running: `cd functions; npm install; cd -`
 
 ## Deploy and test
