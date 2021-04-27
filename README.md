@@ -6,6 +6,9 @@ In `functions` directory, prepare `.env` file, see https://github.com/square/con
 ## Installing dependencies
 Install dependencies locally by running: `cd functions; npm install; cd -`
 
+## Run Square Sandbox
+https://github.com/square/connect-api-examples/tree/master/connect-examples/oauth/node#step-3-running-the-example (1-2 points)
+
 ## Deploy and test
 
 This sample comes with a web-based UI for testing the function.
