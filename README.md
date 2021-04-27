@@ -1,9 +1,9 @@
 # Dine-In Split Back End
 
-##
+## Env file
 In `functions` directory, prepare `.env` file, see  `.env.example`
 
-##
+## Installing dependencies
 Install dependencies locally by running: `cd functions; npm install; cd -`
 
 ## Deploy and test
@@ -16,7 +16,7 @@ To test locally do:
 
 To deploy and test on prod do:
 
- 1. Deploy your project using `firebase deploy`
+ 1. Deploy your functions using `firebase deploy`
  1. Open the app using `firebase open hosting:site`, this will open a browser.
 
 
