@@ -210,8 +210,10 @@ app.get('/v2/customers', async (req, res) => {
 app.post('/v2/locations/:locationId/orders', async (req, res) => {
   try {
     const uriSq = `/v2/locations/${req.params.locationId}/orders`;
+    console.log(typeof req.body);
     console.log(uriSq);
     // console.log(req.body);
+
     const instance = axios.create({
       baseURL: `${SQ_HOST}`,
       timeout: 1000,
@@ -220,9 +222,8 @@ app.post('/v2/locations/:locationId/orders', async (req, res) => {
         'Accepts': 'application/json',
         'Content-Type': 'application/json'
       },
-      data: req.body
     });
-    const result = (await instance.post(uriSq)).data;
+    const result = ((await instance.post(uriSq, req.body)).data);
     res.json(result);
   } catch (err) {
       console.log(err);
