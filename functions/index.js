@@ -6,12 +6,13 @@ const admin = require('firebase-admin');
 admin.initializeApp();
 const express = require('express');
 const cookieParser = require('cookie-parser');
+const bodyParser = require('body-parser')
 const cors = require('cors')({origin: true});
-
 const md5 = require('md5');
 const {ApiError, Client, Environment} = require('square');
+const axios = require('axios');
 
-const {PORT, SQ_SANDBOX_APP_ID, SQ_SANDBOX_APP_SECRET} = process.env;
+const {PORT, SQ_HOST, SQ_SANDBOX_APP_ID, SQ_SANDBOX_APP_SECRET, SQ_SANDBOX_APP_TOKEN} = process.env;
 // Check if example secrets were set
 if (!SQ_SANDBOX_APP_ID || !SQ_SANDBOX_APP_SECRET) {
   console.warn('\x1b[33m%s\x1b[0m', 'Missing secrets! Configure set values for SQ_SANDBOX_APP_ID and SQ_SANDBOX_APP_SECRET in a .env file.');
@@ -180,6 +181,55 @@ const validateFirebaseIdToken = async (req, res, next) => {
     return;
   }
 };
+
+//app.use(express.json());
+//app.use(bodyParser.json());
+
+app.get('/v2/customers', async (req, res) => {
+  try {
+    const uriSq = `/v2/customers`;
+    console.log(uriSq);
+    // console.log(req.body);
+    const instance = axios.create({
+      baseURL: `${SQ_HOST}`,
+      timeout: 1000,
+      headers: {
+        'Authorization': `Bearer ${SQ_SANDBOX_APP_TOKEN}`,
+        'Accepts': 'application/json',
+        'Content-Type': 'application/json'
+      },
+    });
+    const result = (await instance.get(uriSq)).data;
+    res.json(result);
+  } catch (err) {
+    console.log(err);
+    res.send('Error!');
+  }
+});
+
+app.post('/v2/locations/:locationId/orders', async (req, res) => {
+  try {
+    const uriSq = `/v2/locations/${req.params.locationId}/orders`;
+    console.log(uriSq);
+    // console.log(req.body);
+    const instance = axios.create({
+      baseURL: `${SQ_HOST}`,
+      timeout: 1000,
+      headers: {
+        'Authorization': `Bearer ${SQ_SANDBOX_APP_TOKEN}`,
+        'Accepts': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      data: req.body
+    });
+    const result = (await instance.post(uriSq)).data;
+    res.json(result);
+  } catch (err) {
+      console.log(err);
+      res.send('Error!');
+  }
+
+});
 
 app.use(validateFirebaseIdToken);
 app.get('/hello', async (req, res) => {
