@@ -182,9 +182,17 @@ const validateFirebaseIdToken = async (req, res, next) => {
 };
 
 app.use(validateFirebaseIdToken);
-app.get('/hello', (req, res) => {
+app.get('/hello', async (req, res) => {
   // @ts-ignore
-  res.send(`Hello ${req.user.name}`);
+  let message = `Hello ${req.user.name}`;
+  //await admin.firestore().collection('messages').add({original: message});
+  const fbUser = (await admin.firestore().collection('users').doc(req.user.uid).get()).data();
+  let fbUserName = '<undefined>';
+  if (fbUser.username) {
+    fbUserName = fbUser.username;
+  };
+  message = message + ', your FireBase username: ' + fbUserName;
+  res.send(message);
 });
 
 exports.app = functions.https.onRequest(app);
