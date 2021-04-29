@@ -226,6 +226,30 @@ app.get('/v2/customers', async (req, res) => {
   }
 });
 
+app.get('/v2/orders/:orderId', async (req, res) => {
+  try {
+    const uriSq = `/v2/orders/${req.params.orderId}`;
+    const sqResult = await sqPrepareRequest().get(uriSq);
+    res.status(sqResult.status).json(sqResult.data);
+  } catch (err)
+  {
+    const errResult = sqPrepareError(err);
+    res.status(errResult.code).json(errResult);
+  }
+});
+
+app.get('/v2/payments/:paymentId', async (req, res) => {
+  try {
+    const uriSq = `/v2/payments/${req.params.paymentId}`;
+    const sqResult = await sqPrepareRequest().get(uriSq);
+    res.status(sqResult.status).json(sqResult.data);
+  } catch (err)
+  {
+    const errResult = sqPrepareError(err);
+    res.status(errResult.code).json(errResult);
+  }
+});
+
 app.post('/v2/locations/:locationId/orders', async (req, res) => {
   try {
     const uriSq = `/v2/locations/${req.params.locationId}/orders`;
@@ -274,7 +298,32 @@ app.post('/v2/orders/:orderId/pay', async (req, res) => {
   }
 });
 
+app.post('/v2/payments/:paymentId/cancel', async (req, res) => {
+  try {
+    const uriSq = `/v2/payments/${req.params.paymentId}/cancel`;
+    const sqResult = await sqPrepareRequest().post(uriSq, req.body);
+    res.status(sqResult.status).json(sqResult.data);
+  } catch (err)
+  {
+    const errResult = sqPrepareError(err);
+    res.status(errResult.code).json(errResult);
+  }
+});
+
+app.put('/v2/locations/:locationId/orders/:orderId', async (req, res) => {
+  try {
+    const uriSq = `/v2/locations/${req.params.locationId}/orders/${req.params.orderId}`;
+    const sqResult = await sqPrepareRequest().put(uriSq, req.body);
+    res.status(sqResult.status).json(sqResult.data);
+  } catch (err)
+  {
+    const errResult = sqPrepareError(err);
+    res.status(errResult.code).json(errResult);
+  }
+});
+
 app.use(validateFirebaseIdToken);
+
 app.get('/hello', async (req, res) => {
   // @ts-ignore
   let message = `Hello ${req.user.name}`;
@@ -283,9 +332,13 @@ app.get('/hello', async (req, res) => {
   let fbUserName = '<undefined>';
   if (fbUser.username) {
     fbUserName = fbUser.username;
-  };
+  }
   message = message + ', your FireBase username: ' + fbUserName;
   res.send(message);
+});
+
+app.use(function(req, res, next) {
+  res.status(404).json({ code: 404, message: 'Not Found' });
 });
 
 exports.app = functions.https.onRequest(app);
