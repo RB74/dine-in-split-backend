@@ -186,7 +186,7 @@ const sqPrepareRequest = () => {
   return axios.create({
     baseURL: `${SQ_HOST}`,
     headers: {
-      'Authorization': `Bearer ${SQ_SANDBOX_APP_TOKEN}!`,
+      'Authorization': `Bearer ${SQ_SANDBOX_APP_TOKEN}`,
       'Accepts': 'application/json',
       'Content-Type': 'application/json'
     },
@@ -241,6 +241,30 @@ app.post('/v2/locations/:locationId/orders', async (req, res) => {
 app.post('/v2/payments', async (req, res) => {
   try {
     const uriSq = `/v2/payments`;
+    const sqResult = await sqPrepareRequest().post(uriSq, req.body);
+    res.status(sqResult.status).json(sqResult.data);
+  } catch (err)
+  {
+    const errResult = sqPrepareError(err);
+    res.status(errResult.code).json(errResult);
+  }
+});
+
+app.post('/v2/orders/calculate', async (req, res) => {
+  try {
+    const uriSq = `/v2/orders/calculate`;
+    const sqResult = await sqPrepareRequest().post(uriSq, req.body);
+    res.status(sqResult.status).json(sqResult.data);
+  } catch (err)
+  {
+    const errResult = sqPrepareError(err);
+    res.status(errResult.code).json(errResult);
+  }
+});
+
+app.post('/v2/orders/:orderId/pay', async (req, res) => {
+  try {
+    const uriSq = `/v2/orders/${req.params.orderId}/pay`;
     const sqResult = await sqPrepareRequest().post(uriSq, req.body);
     res.status(sqResult.status).json(sqResult.data);
   } catch (err)
