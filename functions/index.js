@@ -6,12 +6,13 @@ const admin = require('firebase-admin');
 admin.initializeApp();
 const express = require('express');
 const cookieParser = require('cookie-parser');
+const bodyParser = require('body-parser')
 const cors = require('cors')({origin: true});
-
 const md5 = require('md5');
 const {ApiError, Client, Environment} = require('square');
+const axios = require('axios');
 
-const {PORT, SQ_SANDBOX_APP_ID, SQ_SANDBOX_APP_SECRET} = process.env;
+const {PORT, SQ_HOST, SQ_SANDBOX_APP_ID, SQ_SANDBOX_APP_SECRET, SQ_SANDBOX_APP_TOKEN} = process.env;
 // Check if example secrets were set
 if (!SQ_SANDBOX_APP_ID || !SQ_SANDBOX_APP_SECRET) {
   console.warn('\x1b[33m%s\x1b[0m', 'Missing secrets! Configure set values for SQ_SANDBOX_APP_ID and SQ_SANDBOX_APP_SECRET in a .env file.');
@@ -181,7 +182,148 @@ const validateFirebaseIdToken = async (req, res, next) => {
   }
 };
 
+const sqPrepareRequest = () => {
+  return axios.create({
+    baseURL: `${SQ_HOST}`,
+    headers: {
+      'Authorization': `Bearer ${SQ_SANDBOX_APP_TOKEN}`,
+      'Accepts': 'application/json',
+      'Content-Type': 'application/json'
+    },
+  });
+}
+
+const sqPrepareError = (err) => {
+  console.log(err);
+  let status = 500;
+  let statusText = 'Internal Server Error (Back End)';
+
+  if (err.response) {
+    status = err.response.status;
+    statusText =  err.response.statusText;
+  }
+
+  const errResult = {
+    code: status,
+    message: statusText,
+  }
+
+  if (err.response.data) {
+    errResult.data = err.response.data;
+  }
+  return errResult;
+}
+
+app.get('/v2/customers', async (req, res) => {
+  try {
+    const uriSq = `/v2/customers`;
+    const sqResult = await sqPrepareRequest().get(uriSq);
+    res.status(sqResult.status).json(sqResult.data);
+  } catch (err)
+  {
+    const errResult = sqPrepareError(err);
+    res.status(errResult.code).json(errResult);
+  }
+});
+
+app.get('/v2/orders/:orderId', async (req, res) => {
+  try {
+    const uriSq = `/v2/orders/${req.params.orderId}`;
+    const sqResult = await sqPrepareRequest().get(uriSq);
+    res.status(sqResult.status).json(sqResult.data);
+  } catch (err)
+  {
+    const errResult = sqPrepareError(err);
+    res.status(errResult.code).json(errResult);
+  }
+});
+
+app.get('/v2/payments/:paymentId', async (req, res) => {
+  try {
+    const uriSq = `/v2/payments/${req.params.paymentId}`;
+    const sqResult = await sqPrepareRequest().get(uriSq);
+    res.status(sqResult.status).json(sqResult.data);
+  } catch (err)
+  {
+    const errResult = sqPrepareError(err);
+    res.status(errResult.code).json(errResult);
+  }
+});
+
+app.post('/v2/locations/:locationId/orders', async (req, res) => {
+  try {
+    const uriSq = `/v2/locations/${req.params.locationId}/orders`;
+    const sqResult = await sqPrepareRequest().post(uriSq, req.body);
+    res.status(sqResult.status).json(sqResult.data);
+  } catch (err)
+  {
+    const errResult = sqPrepareError(err);
+    res.status(errResult.code).json(errResult);
+  }
+});
+
+app.post('/v2/payments', async (req, res) => {
+  try {
+    const uriSq = `/v2/payments`;
+    const sqResult = await sqPrepareRequest().post(uriSq, req.body);
+    res.status(sqResult.status).json(sqResult.data);
+  } catch (err)
+  {
+    const errResult = sqPrepareError(err);
+    res.status(errResult.code).json(errResult);
+  }
+});
+
+app.post('/v2/orders/calculate', async (req, res) => {
+  try {
+    const uriSq = `/v2/orders/calculate`;
+    const sqResult = await sqPrepareRequest().post(uriSq, req.body);
+    res.status(sqResult.status).json(sqResult.data);
+  } catch (err)
+  {
+    const errResult = sqPrepareError(err);
+    res.status(errResult.code).json(errResult);
+  }
+});
+
+app.post('/v2/orders/:orderId/pay', async (req, res) => {
+  try {
+    const uriSq = `/v2/orders/${req.params.orderId}/pay`;
+    const sqResult = await sqPrepareRequest().post(uriSq, req.body);
+    res.status(sqResult.status).json(sqResult.data);
+  } catch (err)
+  {
+    const errResult = sqPrepareError(err);
+    res.status(errResult.code).json(errResult);
+  }
+});
+
+app.post('/v2/payments/:paymentId/cancel', async (req, res) => {
+  try {
+    const uriSq = `/v2/payments/${req.params.paymentId}/cancel`;
+    const sqResult = await sqPrepareRequest().post(uriSq, req.body);
+    res.status(sqResult.status).json(sqResult.data);
+  } catch (err)
+  {
+    const errResult = sqPrepareError(err);
+    res.status(errResult.code).json(errResult);
+  }
+});
+
+app.put('/v2/locations/:locationId/orders/:orderId', async (req, res) => {
+  try {
+    const uriSq = `/v2/locations/${req.params.locationId}/orders/${req.params.orderId}`;
+    const sqResult = await sqPrepareRequest().put(uriSq, req.body);
+    res.status(sqResult.status).json(sqResult.data);
+  } catch (err)
+  {
+    const errResult = sqPrepareError(err);
+    res.status(errResult.code).json(errResult);
+  }
+});
+
 app.use(validateFirebaseIdToken);
+
 app.get('/hello', async (req, res) => {
   // @ts-ignore
   let message = `Hello ${req.user.name}`;
@@ -190,9 +332,13 @@ app.get('/hello', async (req, res) => {
   let fbUserName = '<undefined>';
   if (fbUser.username) {
     fbUserName = fbUser.username;
-  };
+  }
   message = message + ', your FireBase username: ' + fbUserName;
   res.send(message);
+});
+
+app.use(function(req, res, next) {
+  res.status(404).json({ code: 404, message: 'Not Found' });
 });
 
 exports.app = functions.https.onRequest(app);
