@@ -182,28 +182,40 @@ const validateFirebaseIdToken = async (req, res, next) => {
   }
 };
 
-//app.use(express.json());
-//app.use(bodyParser.json());
+const sqPrepareRequest = () => {
+  return axios.create({
+    baseURL: `${SQ_HOST}`,
+    headers: {
+      'Authorization': `Bearer ${SQ_SANDBOX_APP_TOKEN}`,
+      'Accepts': 'application/json',
+      'Content-Type': 'application/json'
+    },
+  });
+}
+
+const sqPrepareError = (err) => {
+  console.log(err);
+  let status = 500;
+  let statusText = 'Internal Server Error (Back End)';
+  if (err.response) {
+    status = err.response.status;
+    statusText =  err.response.statusText;
+  }
+  return  {
+    code: status,
+    message: statusText,
+  }
+}
 
 app.get('/v2/customers', async (req, res) => {
   try {
     const uriSq = `/v2/customers`;
-    console.log(uriSq);
-    // console.log(req.body);
-    const instance = axios.create({
-      baseURL: `${SQ_HOST}`,
-      timeout: 1000,
-      headers: {
-        'Authorization': `Bearer ${SQ_SANDBOX_APP_TOKEN}`,
-        'Accepts': 'application/json',
-        'Content-Type': 'application/json'
-      },
-    });
-    const result = (await instance.get(uriSq)).data;
-    res.json(result);
-  } catch (err) {
-    console.log(err);
-    res.send('Error!');
+    const result = await sqPrepareRequest().get(uriSq);
+    res.status(result.status).json(result.data);
+  } catch (err)
+  {
+    const result = sqPrepareError(err);
+    res.status(result.code).json(result);
   }
 });
 
@@ -216,7 +228,6 @@ app.post('/v2/locations/:locationId/orders', async (req, res) => {
 
     const instance = axios.create({
       baseURL: `${SQ_HOST}`,
-      timeout: 1000,
       headers: {
         'Authorization': `Bearer ${SQ_SANDBOX_APP_TOKEN}`,
         'Accepts': 'application/json',
@@ -225,11 +236,10 @@ app.post('/v2/locations/:locationId/orders', async (req, res) => {
     });
     const result = ((await instance.post(uriSq, req.body)).data);
     res.json(result);
-  } catch (err) {
-      console.log(err);
-      res.send('Error!');
+  } catch (err)
+  {
+    res.json(sqPrepareError());
   }
-
 });
 
 app.use(validateFirebaseIdToken);
