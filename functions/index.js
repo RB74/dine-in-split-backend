@@ -186,7 +186,7 @@ const sqPrepareRequest = () => {
   return axios.create({
     baseURL: `${SQ_HOST}`,
     headers: {
-      'Authorization': `Bearer ${SQ_SANDBOX_APP_TOKEN}`,
+      'Authorization': `Bearer ${SQ_SANDBOX_APP_TOKEN}!`,
       'Accepts': 'application/json',
       'Content-Type': 'application/json'
     },
@@ -197,48 +197,56 @@ const sqPrepareError = (err) => {
   console.log(err);
   let status = 500;
   let statusText = 'Internal Server Error (Back End)';
+
   if (err.response) {
     status = err.response.status;
     statusText =  err.response.statusText;
   }
-  return  {
+
+  const errResult = {
     code: status,
     message: statusText,
   }
+
+  if (err.response.data) {
+    errResult.data = err.response.data;
+  }
+  return errResult;
 }
 
 app.get('/v2/customers', async (req, res) => {
   try {
     const uriSq = `/v2/customers`;
-    const result = await sqPrepareRequest().get(uriSq);
-    res.status(result.status).json(result.data);
+    const sqResult = await sqPrepareRequest().get(uriSq);
+    res.status(sqResult.status).json(sqResult.data);
   } catch (err)
   {
-    const result = sqPrepareError(err);
-    res.status(result.code).json(result);
+    const errResult = sqPrepareError(err);
+    res.status(errResult.code).json(errResult);
   }
 });
 
 app.post('/v2/locations/:locationId/orders', async (req, res) => {
   try {
     const uriSq = `/v2/locations/${req.params.locationId}/orders`;
-    console.log(typeof req.body);
-    console.log(uriSq);
-    // console.log(req.body);
-
-    const instance = axios.create({
-      baseURL: `${SQ_HOST}`,
-      headers: {
-        'Authorization': `Bearer ${SQ_SANDBOX_APP_TOKEN}`,
-        'Accepts': 'application/json',
-        'Content-Type': 'application/json'
-      },
-    });
-    const result = ((await instance.post(uriSq, req.body)).data);
-    res.json(result);
+    const sqResult = await sqPrepareRequest().post(uriSq, req.body);
+    res.status(sqResult.status).json(sqResult.data);
   } catch (err)
   {
-    res.json(sqPrepareError());
+    const errResult = sqPrepareError(err);
+    res.status(errResult.code).json(errResult);
+  }
+});
+
+app.post('/v2/payments', async (req, res) => {
+  try {
+    const uriSq = `/v2/payments`;
+    const sqResult = await sqPrepareRequest().post(uriSq, req.body);
+    res.status(sqResult.status).json(sqResult.data);
+  } catch (err)
+  {
+    const errResult = sqPrepareError(err);
+    res.status(errResult.code).json(errResult);
   }
 });
 
