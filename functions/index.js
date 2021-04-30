@@ -12,7 +12,7 @@ const md5 = require('md5');
 const {ApiError, Client, Environment} = require('square');
 const axios = require('axios');
 
-const {PORT, SQ_HOST, SQ_SANDBOX_APP_ID, SQ_SANDBOX_APP_SECRET, SQ_SANDBOX_APP_TOKEN} = process.env;
+const {PORT, SQ_HOST, SQ_SANDBOX_APP_ID, SQ_SANDBOX_APP_SECRET } = process.env;
 // Check if example secrets were set
 if (!SQ_SANDBOX_APP_ID || !SQ_SANDBOX_APP_SECRET) {
   console.warn('\x1b[33m%s\x1b[0m', 'Missing secrets! Configure set values for SQ_SANDBOX_APP_ID and SQ_SANDBOX_APP_SECRET in a .env file.');
@@ -25,7 +25,7 @@ const messages = require('./sandbox-messages');
 // The default environment for this example is sandbox
 let basePath = `https://connect.squareupsandbox.com`;
 
-// Configure Square defcault client
+// Configure Square default client
 const squareClient = new Client({
   environment: Environment.Sandbox
 });
@@ -74,7 +74,6 @@ app.get("/sandbox_request_token", (req, res) => {
  *  code: the authorization code
  */
 app.get('/sandbox_callback', async (req, res) => {
-  console.log(req.query);
   // Verify the state to protect against cross-site request forgery.
   /* if (req.cookies["Auth_State"] !== req.query['state']) {
     res.send(messages.displayStateError());
@@ -140,6 +139,7 @@ app.get('/test', (req, res) => {
 // `Authorization: Bearer <Firebase ID Token>`.
 // when decoded successfully, the ID Token content will be added as `req.user`.
 const validateFirebaseIdToken = async (req, res, next) => {
+  const ERR_MESSAGE = 'Unauthorized Firebase User';
   functions.logger.log('Check if request is authorized with Firebase ID token');
 
   if ((!req.headers.authorization || !req.headers.authorization.startsWith('Bearer ')) &&
@@ -150,7 +150,7 @@ const validateFirebaseIdToken = async (req, res, next) => {
       'Authorization: Bearer <Firebase ID Token>',
       'or by passing a "__session" cookie.'
     );
-    res.status(403).send('Unauthorized');
+    res.status(403).json({ code: 403, message: ERR_MESSAGE});
     return;
   }
 
@@ -165,7 +165,7 @@ const validateFirebaseIdToken = async (req, res, next) => {
     idToken = req.cookies.__session;
   } else {
     // No cookie
-    res.status(403).send('Unauthorized');
+    res.status(403).json({ code: 403, message: ERR_MESSAGE});
     return;
   }
 
@@ -177,16 +177,37 @@ const validateFirebaseIdToken = async (req, res, next) => {
     return;
   } catch (error) {
     functions.logger.error('Error while verifying Firebase ID token:', error);
-    res.status(403).send('Unauthorized');
+    res.status(403).json({ code: 403, message: ERR_MESSAGE});
     return;
   }
 };
 
-const sqPrepareRequest = () => {
+const validateSquareToken = async (req, res, next) => {
+  const ERR_MESSAGE = 'Unauthorized Square (No User\'s Token)';
+  functions.logger.log('Check if request is authorized with Square token');
+  try {
+    const fbUser = (await admin.firestore().collection('users').doc(req.user.uid).get()).data();
+    if ((fbUser!=undefined) && (fbUser) && (fbUser.accessToken)) {
+      req.userFirebase = fbUser;
+      next();
+      return;
+    } else {
+      // No Token
+      res.status(403).json({ code: 403, message: ERR_MESSAGE});
+      return;
+    }
+  } catch (error) {
+    functions.logger.error('Error while verifying Square token:', error);
+    res.status(403).json({ code: 403, message: ERR_MESSAGE});
+    return;
+  }
+}
+
+const sqPrepareRequest = (accessToken) => {
   return axios.create({
     baseURL: `${SQ_HOST}`,
     headers: {
-      'Authorization': `Bearer ${SQ_SANDBOX_APP_TOKEN}`,
+      'Authorization': `Bearer ${accessToken}`,
       'Accepts': 'application/json',
       'Content-Type': 'application/json'
     },
@@ -194,7 +215,6 @@ const sqPrepareRequest = () => {
 }
 
 const sqPrepareError = (err) => {
-  console.log(err);
   let status = 500;
   let statusText = 'Internal Server Error (Back End)';
 
@@ -214,10 +234,13 @@ const sqPrepareError = (err) => {
   return errResult;
 }
 
+app.use(validateFirebaseIdToken);
+app.use(validateSquareToken);
+
 app.get('/v2/customers', async (req, res) => {
   try {
     const uriSq = `/v2/customers`;
-    const sqResult = await sqPrepareRequest().get(uriSq);
+    const sqResult = await sqPrepareRequest(req.userFirebase.accessToken).get(uriSq);
     res.status(sqResult.status).json(sqResult.data);
   } catch (err)
   {
@@ -229,7 +252,7 @@ app.get('/v2/customers', async (req, res) => {
 app.get('/v2/orders/:orderId', async (req, res) => {
   try {
     const uriSq = `/v2/orders/${req.params.orderId}`;
-    const sqResult = await sqPrepareRequest().get(uriSq);
+    const sqResult = await sqPrepareRequest(req.userFirebase.accessToken).get(uriSq);
     res.status(sqResult.status).json(sqResult.data);
   } catch (err)
   {
@@ -241,7 +264,7 @@ app.get('/v2/orders/:orderId', async (req, res) => {
 app.get('/v2/payments/:paymentId', async (req, res) => {
   try {
     const uriSq = `/v2/payments/${req.params.paymentId}`;
-    const sqResult = await sqPrepareRequest().get(uriSq);
+    const sqResult = await sqPrepareRequest(req.userFirebase.accessToken).get(uriSq);
     res.status(sqResult.status).json(sqResult.data);
   } catch (err)
   {
@@ -253,7 +276,7 @@ app.get('/v2/payments/:paymentId', async (req, res) => {
 app.post('/v2/locations/:locationId/orders', async (req, res) => {
   try {
     const uriSq = `/v2/locations/${req.params.locationId}/orders`;
-    const sqResult = await sqPrepareRequest().post(uriSq, req.body);
+    const sqResult = await sqPrepareRequest(req.userFirebase.accessToken).post(uriSq, req.body);
     res.status(sqResult.status).json(sqResult.data);
   } catch (err)
   {
@@ -265,7 +288,7 @@ app.post('/v2/locations/:locationId/orders', async (req, res) => {
 app.post('/v2/payments', async (req, res) => {
   try {
     const uriSq = `/v2/payments`;
-    const sqResult = await sqPrepareRequest().post(uriSq, req.body);
+    const sqResult = await sqPrepareRequest(req.userFirebase.accessToken).post(uriSq, req.body);
     res.status(sqResult.status).json(sqResult.data);
   } catch (err)
   {
@@ -277,7 +300,7 @@ app.post('/v2/payments', async (req, res) => {
 app.post('/v2/orders/calculate', async (req, res) => {
   try {
     const uriSq = `/v2/orders/calculate`;
-    const sqResult = await sqPrepareRequest().post(uriSq, req.body);
+    const sqResult = await sqPrepareRequest(req.userFirebase.accessToken).post(uriSq, req.body);
     res.status(sqResult.status).json(sqResult.data);
   } catch (err)
   {
@@ -289,7 +312,7 @@ app.post('/v2/orders/calculate', async (req, res) => {
 app.post('/v2/orders/:orderId/pay', async (req, res) => {
   try {
     const uriSq = `/v2/orders/${req.params.orderId}/pay`;
-    const sqResult = await sqPrepareRequest().post(uriSq, req.body);
+    const sqResult = await sqPrepareRequest(req.userFirebase.accessToken).post(uriSq, req.body);
     res.status(sqResult.status).json(sqResult.data);
   } catch (err)
   {
@@ -301,7 +324,7 @@ app.post('/v2/orders/:orderId/pay', async (req, res) => {
 app.post('/v2/payments/:paymentId/cancel', async (req, res) => {
   try {
     const uriSq = `/v2/payments/${req.params.paymentId}/cancel`;
-    const sqResult = await sqPrepareRequest().post(uriSq, req.body);
+    const sqResult = await sqPrepareRequest(req.userFirebase.accessToken).post(uriSq, req.body);
     res.status(sqResult.status).json(sqResult.data);
   } catch (err)
   {
@@ -313,7 +336,7 @@ app.post('/v2/payments/:paymentId/cancel', async (req, res) => {
 app.put('/v2/locations/:locationId/orders/:orderId', async (req, res) => {
   try {
     const uriSq = `/v2/locations/${req.params.locationId}/orders/${req.params.orderId}`;
-    const sqResult = await sqPrepareRequest().put(uriSq, req.body);
+    const sqResult = await sqPrepareRequest(req.userFirebase.accessToken).put(uriSq, req.body);
     res.status(sqResult.status).json(sqResult.data);
   } catch (err)
   {
@@ -322,15 +345,17 @@ app.put('/v2/locations/:locationId/orders/:orderId', async (req, res) => {
   }
 });
 
-app.use(validateFirebaseIdToken);
+/**
+ * Description:
+ *  Demo For Auth Testing
+ */
 
 app.get('/hello', async (req, res) => {
   // @ts-ignore
   let message = `Hello ${req.user.name}`;
-  //await admin.firestore().collection('messages').add({original: message});
-  const fbUser = (await admin.firestore().collection('users').doc(req.user.uid).get()).data();
-  let fbUserName = '<undefined>';
-  if (fbUser.username) {
+  const fbUser = req.userFirebase;
+  let fbUserName = '<-undefined->';
+  if ((fbUser!=undefined) && (fbUser.username)) {
     fbUserName = fbUser.username;
   }
   message = message + ', your FireBase username: ' + fbUserName;
